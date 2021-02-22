@@ -194,6 +194,10 @@ class Image(Resource):
         copyright_img                       = req['copyright_img']
         date_de_fin_droits_utilisation      = req['date_de_fin_droits_utilisation']
         image                               = req['image']
+        date                                = 
+        add_pic = ("INSERT INTO picture (nom, type_image, photo_avec_produit, photo_avec_humain, photo_institutionnelle, format, credits_photo, droits_utilisation_limite, copyright, date_de_fin_droits_utilisation, image) VALUES (\"azerty\")")
+        cursor.execute(get_paths)
+        image = cursor.fetchall()
         cnxn.close()
         return
     

@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 import mysql.connector
 from mysql.connector.constants import ClientFlag
+import datetime
 
 config = {
     'user': 'root',
@@ -15,82 +16,6 @@ config = {
     'ssl_key': 'ssl/client-key.pem',
     'database': 'challenge'
 }
-
-cnxn = mysql.connector.connect(**config)
-cursor = cnxn.cursor()
-
-# try :
-#     cursor.execute("DROP TABLE picture")
-# except :
-#     pass
-# cursor.execute("CREATE TABLE picture ("
-#                "id int AUTO_INCREMENT PRIMARY KEY,"
-#                "picture VARCHAR(8000),"
-#                "category VARCHAR(255) )")
-# cnxn.commit()
-
-# try :
-#     cursor.execute("DROP TABLE tag")
-# except :
-#     pass
-# cursor.execute("CREATE TABLE tag ("
-#                "id int AUTO_INCREMENT PRIMARY KEY,"
-#                "name VARCHAR(255) )")
-# cnxn.commit()
-
-# cnxn = mysql.connector.connect(**config)
-# cursor = cnxn.cursor()
-
-# try :
-#     cursor.execute("DROP TABLE picture_tag")
-# except :
-#     pass
-# cursor.execute("CREATE TABLE picture_tag ("
-#                "id_picture int(255),"
-#                "id_tag int(255))")
-# cnxn.commit()
-
-# add_pic = ("INSERT INTO picture "
-#               "(image)"
-#               "VALUES (\"azerty\")")
-# cursor.execute(add_pic)
-# cnxn.commit() 
-
-# add_tag = ("INSERT INTO tag "
-#               "(name)"
-#               "VALUES (%(name)s)")
-# data_tag = {
-#   'name': "test"
-# }
-# cursor.execute(add_tag, data_tag)
-# cnxn.commit() 
-
-# add_pic = ("INSERT INTO picture_tag "
-#               "(id_picture, id_tag)"
-#               "VALUES (%(picture)s, %(tag)s)")
-# data_pic = {
-#   'picture': "2",
-#   'tag': "2"
-# }
-# cursor.execute(add_pic, data_pic)
-# cnxn.commit() 
-
-cursor.execute("SELECT * FROM picture")
-fetch = cursor.fetchall()
-for i in fetch:
-    print(i)
-
-cursor.execute("SELECT * FROM tag")
-fetch = cursor.fetchall()
-for i in fetch:
-    print(i)
-
-cursor.execute("SELECT * FROM picture_tag")
-fetch = cursor.fetchall()
-for i in fetch:
-    print(i)
-
-cnxn.close()
 
 # Initiate APP
 app = Flask(__name__)
@@ -161,7 +86,7 @@ class GetImages(Resource):
             imgs.append(cursor.fetchall())
         cnxn.close()
         print(imgs)
-        return
+        return jsonify('200')
 
 class Image(Resource):
     # récupérer
@@ -194,25 +119,84 @@ class Image(Resource):
         copyright_img                       = req['copyright_img']
         date_de_fin_droits_utilisation      = req['date_de_fin_droits_utilisation']
         image                               = req['image']
-        date                                = 
-        add_pic = ("INSERT INTO picture (nom, type_image, photo_avec_produit, photo_avec_humain, photo_institutionnelle, format, credits_photo, droits_utilisation_limite, copyright, date_de_fin_droits_utilisation, image) VALUES (\"azerty\")")
-        cursor.execute(get_paths)
-        image = cursor.fetchall()
+        date                                = str(datetime.datetime.now())
+        add_pic = ("INSERT INTO picture (nom, type_image, photo_avec_produit, photo_avec_humain, photo_institutionnelle, format, credits_photo, droits_utilisation_limite, copyright, date_de_fin_droits_utilisation, image)"
+        " VALUES (" + img_nom + type_image + photo_avec_produit + photo_avec_humain + photo_institutionnelle + format_img + credits_photo + droits_utilisation_limite + copyright_img + date_de_fin_droits_utilisation + image + date + ")")
+        cursor.execute(add_pic)
+        cnxn.commit()
         cnxn.close()
-        return
+        return 200
     
     # Mettre a jour
     def update(self):
         cnxn = mysql.connector.connect(**config)
         cursor = cnxn.cursor()
-
+        req = request.json
+        update_pic_start = "INSERT INTO picture ("
+        if req['nom'] :
+            update_pic_start = update_pic_start + 'nom, '
+        if req['type_image'] :
+            update_pic_start = update_pic_start + 'type_image, '
+        if req['photo_avec_produit'] :
+            update_pic_start = update_pic_start + 'photo_avec_produit, '
+        if req['photo_avec_humain'] :
+            update_pic_start = update_pic_start + 'photo_avec_humain, '
+        if req['photo_institutionnelle'] :
+            update_pic_start = update_pic_start + 'photo_institutionnelle, '
+        if req['format_img'] :
+            update_pic_start = update_pic_start + 'format_img, '
+        if req['credits_photo'] :
+            update_pic_start = update_pic_start + 'credits_photo, '
+        if req['droits_utilisation_limite']:
+            update_pic_start = update_pic_start + 'droits_utilisation_limite, ' 
+        if req['copyright_img']:
+            update_pic_start = update_pic_start + 'copyright_img, '
+        if req['date_de_fin_droits_utilisation']:
+            update_pic_start = update_pic_start + 'date_de_fin_droits_utilisation, '
+        if req['image']:
+            update_pic_start = update_pic_start + 'image, '
+        if req['date']:
+            update_pic_start = update_pic_start + 'date'
+        update_pic_end = ") VALUES ("
+        if req['nom'] :
+            update_pic_end = update_pic_end + req['nom']
+        if req['type_image'] :
+            update_pic_end = update_pic_end + req['type_image']
+        if req['photo_avec_produit'] :
+            update_pic_end = update_pic_end + req['photo_avec_produit']
+        if req['photo_avec_humain'] :
+            update_pic_end = update_pic_end + req['photo_avec_humain'] 
+        if req['photo_institutionnelle'] :
+            update_pic_end = update_pic_end + req['photo_institutionnelle']
+        if req['format_img'] :
+            update_pic_end = update_pic_end + req['format_img']
+        if req['credits_photo'] :
+            update_pic_end = update_pic_end + req['credits_photo']
+        if req['droits_utilisation_limite']:
+            update_pic_end = update_pic_end + req['droits_utilisation_limite']  
+        if req['copyright_img']:
+            update_pic_end = update_pic_end + req['copyright_img'] 
+        if req['date_de_fin_droits_utilisation']:
+            update_pic_end = update_pic_end + req['date_de_fin_droits_utilisation']
+        if req['image']:
+            update_pic_end = update_pic_end + req['image']
+        if req['date']:
+            update_pic_end = update_pic_end + req['date'] 
+        update_pic_end = update_pic_end + ")"   
+        update_pic = update_pic_start + update_pic_end
+        cursor.execute(update_pic)
+        cnxn.commit()
         cnxn.close()
         return
 
     def delete(self):
         cnxn = mysql.connector.connect(**config)
         cursor = cnxn.cursor()
-
+        req = request.json
+        img_id = req['id']
+        delete_pic = ("DELETE * FROM picture where id = " + str(img_id))
+        cursor.execute(delete_pic)
+        cnxn.commit()
         cnxn.close()
         return
 

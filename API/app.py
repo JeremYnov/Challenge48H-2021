@@ -1,6 +1,6 @@
 # Imports API
 from flask import jsonify
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_restful import Api, Resource
 import mysql.connector
 from mysql.connector.constants import ClientFlag
@@ -86,7 +86,9 @@ class GetImages(Resource):
             imgs.append(cursor.fetchall())
         cnxn.close()
         print(imgs)
-        return jsonify('200')
+        response = make_response(jsonify('200'))
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
 
 class Image(Resource):
     # récupérer

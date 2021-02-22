@@ -2,9 +2,9 @@
 from flask import jsonify
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
-from flask_migrate import Migrate
 import mysql.connector
 from mysql.connector.constants import ClientFlag
+import datetime
 
 config = {
     'user': 'root',
@@ -16,88 +16,6 @@ config = {
     'ssl_key': 'ssl/client-key.pem',
     'database': 'challenge'
 }
-
-cnxn = mysql.connector.connect(**config)
-cursor = cnxn.cursor()
-
-# try :
-#     cursor.execute("DROP TABLE picture")
-# except :
-#     pass
-# cursor.execute("CREATE TABLE picture ("
-#                "id int AUTO_INCREMENT PRIMARY KEY,"
-#                "picture VARCHAR(8000),"
-#                "category VARCHAR(255) )")
-# cnxn.commit()
-
-# try :
-#     cursor.execute("DROP TABLE tag")
-# except :
-#     pass
-# cursor.execute("CREATE TABLE tag ("
-#                "id int AUTO_INCREMENT PRIMARY KEY,"
-#                "name VARCHAR(255) )")
-# cnxn.commit()
-
-# cnxn = mysql.connector.connect(**config)
-# cursor = cnxn.cursor()
-
-# try :
-#     cursor.execute("DROP TABLE picture_tag")
-# except :
-#     pass
-# cursor.execute("CREATE TABLE picture_tag ("
-#                "id_picture int(255),"
-#                "id_tag int(255))")
-# cnxn.commit()
-
-# cnxn.close()
-
-# add_pic = ("INSERT INTO picture "
-#               "(picture, category)"
-#               "VALUES (%(picture)s, %(category)s)")
-# data_pic = {
-#   'picture': "qwerty",
-#   'category': "ambiance"
-# }
-# cursor.execute(add_pic, data_pic)
-# cnxn.commit() 
-
-# add_tag = ("INSERT INTO tag "
-#               "(name)"
-#               "VALUES (%(name)s)")
-# data_tag = {
-#   'name': "test"
-# }
-# cursor.execute(add_tag, data_tag)
-# cnxn.commit() 
-
-# add_pic = ("INSERT INTO picture_tag "
-#               "(id_picture, id_tag)"
-#               "VALUES (%(picture)s, %(tag)s)")
-# data_pic = {
-#   'picture': "1",
-#   'tag': "1"
-# }
-# cursor.execute(add_pic, data_pic)
-# cnxn.commit() 
-
-# cursor.execute("SELECT * FROM picture")
-# fetch = cursor.fetchall()
-# for i in fetch:
-#     print(i)
-
-# cursor.execute("SELECT * FROM tag")
-# fetch = cursor.fetchall()
-# for i in fetch:
-#     print(i)
-
-# cursor.execute("SELECT * FROM picture_tag")
-# fetch = cursor.fetchall()
-# for i in fetch:
-#     print(i)
-
-cnxn.close()
 
 # Initiate APP
 app = Flask(__name__)
@@ -114,42 +32,74 @@ class GetImages(Resource):
     def get(self):
         cnxn = mysql.connector.connect(**config)
         cursor = cnxn.cursor(buffered=True)
+        get_no_tagged = 0
+        imgs = []
         # On récupère les tags dans le body de la request
         req = request.json
-        tags = req["names"]
-        formated_tags = "("
-        for tag in tags :
-            formated_tags = formated_tags + "\'" + tag + "\',"
-        formated_tags = formated_tags[:-1] + ")"
-        print(formated_tags)
-        # On Récupère les ids des tags
-        search_tags = "SELECT id FROM tag where name IN " + formated_tags
-        print(search_tags)
-        id_tags = cursor.execute(search_tags)
-        cnxn.commit() 
-        print("///////////////////// ID TAGS /////////////////////")
-        print(id_tags)
-        # traitement a faire sur id_tags pour que la string ai cette gueule : ('1','2'...)
-        # On récupère les ids des pictures en fonction des tags
-        get_pics = ("SELECT id_picture FROM picture_tag where "
-              "id_tag IN " + id_tags)
-        id_pics = cursor.execute(get_pics)
-        cnxn.commit() 
-        # récupérer les paths des pictures
-        get_paths = ("SELECT picture, category FROM picture where "
-              "id IN " + id_pics)
-        cnxn.commit() 
-        print(get_paths)
-        # Send
+        tags = req["tags"]
+        # Test si on veut avoir les images sans tags
+        if 'notags' in tags:
+            get_no_tagged = 1
+        # S'ils y a des tags et que 'notag' n'est pas le seul tag
+        if tags and get_no_tagged == 1 and len(tags) >= 2 :
+            # On formate une string avec les tags pour concaténer a la requete SQL
+            formated_tags = "("
+            for tag in tags :
+                formated_tags = formated_tags + "\'" + tag + "\',"
+            formated_tags = formated_tags[:-1] + ")"
+            # On Récupère les ids des tags
+            search_tags = "SELECT * FROM tag where name IN " + formated_tags
+            cursor.execute(search_tags)
+            id_tags = cursor.fetchall()
+            # On formate une string avec les tags pour concaténer a la requete SQL
+            formated_result = "("
+            for id_tag in id_tags :
+                formated_result = formated_result +  str(id_tag[0]) + ","
+            formated_result = formated_result[:-1] + ")"
+            # On récupère les ids des pictures en fonction des tags
+            get_pics = ("SELECT id_picture FROM picture_tag where id_tag IN " + formated_result)
+            cursor.execute(get_pics)
+            id_pics = cursor.fetchall()
+            # On formate une string avec les tags pour concaténer a la requete SQL
+            formated_pics = "("
+            for id_pic in id_pics :
+                formated_pics = formated_pics + str(id_pic[0]) + ","
+            formated_pics = formated_pics[:-1] + ")"
+            # récupérer les paths des pictures
+            get_paths = ("SELECT * FROM picture where id IN " + formated_pics)
+            cursor.execute(get_paths)
+            imgs.append(cursor.fetchall())
+        # Si le seul tag c'est les images sans tag
+        if tags and get_no_tagged == 1 and len(tags) == 1:
+            # on récupère tous les ids des photos qui ne sont pas dans la table de relation entre tags et images
+            get_pics_ids = ("SELECT * FROM picture_tag")
+            cursor.execute(get_pics_ids)
+            get_pics_ids = cursor.fetchall()
+            # On formate une string avec les tags pour concaténer a la requete SQL
+            formated_pics_ids = "("
+            for id_pic_id in get_pics_ids :
+                formated_pics_ids = formated_pics_ids + str(id_pic_id[0]) + ","
+            formated_pics_ids = formated_pics_ids[:-1] + ")"
+            # On recherche les images qui ont un id pas dans le résultat de la requête précédente
+            get_imgs_not_tagged = ("SELECT * FROM picture where id NOT IN " + formated_pics_ids)
+            cursor.execute(get_imgs_not_tagged)
+            imgs.append(cursor.fetchall())
         cnxn.close()
-        return 
+        print(imgs)
+        return jsonify('200')
 
 class Image(Resource):
     # récupérer
     def get(self):
         cnxn = mysql.connector.connect(**config)
         cursor = cnxn.cursor()
-
+        # On récupère les tags dans le body de la request
+        req = request.json
+        img_id = req['id']
+        get_paths = ("SELECT * FROM picture where id = " + str(img_id))
+        cursor.execute(get_paths)
+        image = cursor.fetchall()
+        print(image)
         cnxn.close()
         return
     
@@ -157,22 +107,96 @@ class Image(Resource):
     def post(self):
         cnxn = mysql.connector.connect(**config)
         cursor = cnxn.cursor()
-
+        req = request.json
+        img_nom                             = req['nom']
+        type_image                          = req['type_image']
+        photo_avec_produit                  = req['photo_avec_produit']
+        photo_avec_humain                   = req['photo_avec_humain']
+        photo_institutionnelle              = req['photo_institutionnelle']
+        format_img                          = req['format_img']
+        credits_photo                       = req['credits_photo']
+        droits_utilisation_limite           = req['droits_utilisation_limite']
+        copyright_img                       = req['copyright_img']
+        date_de_fin_droits_utilisation      = req['date_de_fin_droits_utilisation']
+        image                               = req['image']
+        date                                = str(datetime.datetime.now())
+        add_pic = ("INSERT INTO picture (nom, type_image, photo_avec_produit, photo_avec_humain, photo_institutionnelle, format, credits_photo, droits_utilisation_limite, copyright, date_de_fin_droits_utilisation, image)"
+        " VALUES (" + img_nom + type_image + photo_avec_produit + photo_avec_humain + photo_institutionnelle + format_img + credits_photo + droits_utilisation_limite + copyright_img + date_de_fin_droits_utilisation + image + date + ")")
+        cursor.execute(add_pic)
+        cnxn.commit()
         cnxn.close()
-        return
+        return 200
     
     # Mettre a jour
     def update(self):
         cnxn = mysql.connector.connect(**config)
         cursor = cnxn.cursor()
-
+        req = request.json
+        update_pic_start = "INSERT INTO picture ("
+        if req['nom'] :
+            update_pic_start = update_pic_start + 'nom, '
+        if req['type_image'] :
+            update_pic_start = update_pic_start + 'type_image, '
+        if req['photo_avec_produit'] :
+            update_pic_start = update_pic_start + 'photo_avec_produit, '
+        if req['photo_avec_humain'] :
+            update_pic_start = update_pic_start + 'photo_avec_humain, '
+        if req['photo_institutionnelle'] :
+            update_pic_start = update_pic_start + 'photo_institutionnelle, '
+        if req['format_img'] :
+            update_pic_start = update_pic_start + 'format_img, '
+        if req['credits_photo'] :
+            update_pic_start = update_pic_start + 'credits_photo, '
+        if req['droits_utilisation_limite']:
+            update_pic_start = update_pic_start + 'droits_utilisation_limite, ' 
+        if req['copyright_img']:
+            update_pic_start = update_pic_start + 'copyright_img, '
+        if req['date_de_fin_droits_utilisation']:
+            update_pic_start = update_pic_start + 'date_de_fin_droits_utilisation, '
+        if req['image']:
+            update_pic_start = update_pic_start + 'image, '
+        if req['date']:
+            update_pic_start = update_pic_start + 'date'
+        update_pic_end = ") VALUES ("
+        if req['nom'] :
+            update_pic_end = update_pic_end + req['nom']
+        if req['type_image'] :
+            update_pic_end = update_pic_end + req['type_image']
+        if req['photo_avec_produit'] :
+            update_pic_end = update_pic_end + req['photo_avec_produit']
+        if req['photo_avec_humain'] :
+            update_pic_end = update_pic_end + req['photo_avec_humain'] 
+        if req['photo_institutionnelle'] :
+            update_pic_end = update_pic_end + req['photo_institutionnelle']
+        if req['format_img'] :
+            update_pic_end = update_pic_end + req['format_img']
+        if req['credits_photo'] :
+            update_pic_end = update_pic_end + req['credits_photo']
+        if req['droits_utilisation_limite']:
+            update_pic_end = update_pic_end + req['droits_utilisation_limite']  
+        if req['copyright_img']:
+            update_pic_end = update_pic_end + req['copyright_img'] 
+        if req['date_de_fin_droits_utilisation']:
+            update_pic_end = update_pic_end + req['date_de_fin_droits_utilisation']
+        if req['image']:
+            update_pic_end = update_pic_end + req['image']
+        if req['date']:
+            update_pic_end = update_pic_end + req['date'] 
+        update_pic_end = update_pic_end + ")"   
+        update_pic = update_pic_start + update_pic_end
+        cursor.execute(update_pic)
+        cnxn.commit()
         cnxn.close()
         return
 
     def delete(self):
         cnxn = mysql.connector.connect(**config)
         cursor = cnxn.cursor()
-
+        req = request.json
+        img_id = req['id']
+        delete_pic = ("DELETE * FROM picture where id = " + str(img_id))
+        cursor.execute(delete_pic)
+        cnxn.commit()
         cnxn.close()
         return
 

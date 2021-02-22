@@ -88,6 +88,7 @@ class GetImages(Resource):
         print(imgs)
         response = make_response(jsonify('200'))
         response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET"
         return response
 
 class Image(Resource):

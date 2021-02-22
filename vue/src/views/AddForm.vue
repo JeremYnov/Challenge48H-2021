@@ -86,7 +86,9 @@
       <br />
       <br />
       <label for="tags">Tags</label>
-      <input type="text" />
+      <input type="text" v-model="tag"/>
+      <button v-on:click="addNewTag()">+</button>
+      <div v-for="(tag,index) in tags" v-bind:key="index">{{tag.name}}</div>
       <br />
       <br />
       <label for="choice-radio"
@@ -127,9 +129,15 @@ export default {
       limitedUsage: null,
       copyright: null,
       UsageDate: null,
+      tag:'',
       tags: [],
     };
   },
+  methods:{
+    addNewTag:function(){
+      this.tags.push({name : this.tag})
+    }
+  }
 };
 </script>
 

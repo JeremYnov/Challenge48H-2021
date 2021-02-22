@@ -20,15 +20,15 @@ config = {
 db = mysql.connector.connect(**config)
 mycursor=db.cursor()
 
-# mycursor.execute("drop table img")
-# mycursor.execute("create table img(images longblob not null);")
+mycursor.execute("drop table img")
+mycursor.execute("create table img(images longblob not null);")
 
 def push(path):
     with open(path, 'rb') as f:
         photo = f.read()
     encodestring = base64.b64encode(photo)
 
-    sql = "insert into img values(%s)"
+    sql = "insert into picture (image) values (%s)"
     mycursor.execute(sql,(encodestring,))
     db.commit()
 
